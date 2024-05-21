@@ -1,13 +1,13 @@
 {
-  "name": "vite-vanilla-ts-lib-starter",
+  "name": "openapi-convert",
   "private": true,
-  "version": "0.0.2",
-  "main": "./dist/vite-vanilla-ts-lib-starter.cjs",
-  "module": "./dist/vite-vanilla-ts-lib-starter.mjs",
+  "version": "0.0.1",
+  "main": "./dist/openapi-convert.cjs",
+  "module": "./dist/openapi-convert.mjs",
   "exports": {
     ".": {
-      "require": "./dist/vite-vanilla-ts-lib-starter.cjs",
-      "import": "./dist/vite-vanilla-ts-lib-starter.mjs"
+      "require": "./dist/openapi-convert.cjs",
+      "import": "./dist/openapi-convert.mjs"
     },
     "./dist/": {
       "import": "./dist/",
