@@ -1,0 +1,28 @@
+{
+  "undefined": {
+    "files": [
+      {
+        "name": "MyName",
+        "code": "export type MyName = string;"
+      }
+    ]
+  },
+  "TaskOnCommunity": {
+    "folder": "TaskOnCommunity",
+    "files": [
+      {
+        "name": "ColorSetting",
+        "code": "export interface ColorSetting {primary?: string;secondary?: string;}"
+      }
+    ]
+  },
+  "Common": {
+    "folder": "Common",
+    "files": [
+      {
+        "name": "ChainInfo",
+        "code": "export interface ChainInfo {id?: number;icon?: string;label?: string;contract?: string;nft_contract?: string;old_nft_contract?: string;is_support_opensea?: todo unknown boolean;rpc_url?: string;explorer_url?: string;coin_name?: string;coin_symbol?: string;coin_decimals?: number;taskonfund_token_contract?: string;taskonfund_nft_contract?: string;airdrop_contract?: string;factory_contract_address?: string;controller_contract_address?: string;entry_contract_address?: string;gas_station_contract?: string;}"
+      }
+    ]
+  }
+}

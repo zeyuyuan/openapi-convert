@@ -10,6 +10,7 @@
     "module": "ESNext",
     "lib": ["ESNext", "DOM"],
     "moduleResolution": "Node",
+    "resolvePackageJsonImports": true,
     "strict": true,
     "sourceMap": true,
     "resolveJsonModule": true,
