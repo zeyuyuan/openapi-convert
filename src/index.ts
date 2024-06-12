@@ -1,3 +1,1 @@
-import "./style.css";
-
-export { covert } from "./covert";
+export { OpenApiConverter } from "./OpenApiConverter";

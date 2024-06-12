@@ -1,0 +1,59 @@
+{
+  "openapi": "3.0.1",
+  "components": {
+    "schemas": {
+      "TestString": {
+        "type": "string",
+        "x-apifox-folder": "TestFolder1"
+      },
+      "TestObject": {
+        "type": "object",
+        "properties": {
+          "objectStr1": {
+            "type": "string"
+          },
+          "objectInt1": {
+            "type": "integer"
+          },
+          "objectObj1": {
+            "type": "object",
+            "properties": {
+              "a1": {
+                "type": "string"
+              },
+              "a3Obj": {
+                "type": "object",
+                "properties": {
+                  "a3a1": {
+                    "type": "string"
+                  }
+                },
+                "required": ["a3a1"]
+              }
+            },
+            "required": ["a1"]
+          }
+        },
+        "required": ["objectStr1"],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "TestFolder1"
+      },
+      "TestRefs": {
+        "type": "object",
+        "properties": {
+          "testStr": {
+            "type": "string"
+          },
+          "testRef": {
+            "$ref": "#/components/schemas/TestObject"
+          }
+        },
+        "required": [],
+        "x-apifox-orders": [],
+        "title": "",
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "TestFolder2"
+      }
+    }
+  }
+}

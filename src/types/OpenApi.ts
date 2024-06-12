@@ -5,14 +5,14 @@ export interface OpenApiProperty {
 }
 
 export interface OpenApiSchema {
-  type: "string" | "integer" | "array" | "object";
+  type?: "string" | "integer" | "number" | "array" | "object";
   properties?: Record<string, OpenApiSchema>; //object
   items?: OpenApiSchema[]; //  array
   $ref?: string; // reference to other scheme
-  "x-apifox-orders": string[];
+  "x-apifox-orders"?: string[];
   required?: string[]; // object
-  "x-apifox-ignore-properties": string[];
-  "x-apifox-folder": string;
+  "x-apifox-ignore-properties"?: string[];
+  "x-apifox-folder"?: string;
 }
 
 export interface OpenApiComponents {
