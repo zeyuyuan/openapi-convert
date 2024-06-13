@@ -5,9 +5,9 @@ export interface OpenApiProperty {
 }
 
 export interface OpenApiSchema {
-  type?: "string" | "integer" | "number" | "array" | "object";
+  type?: "string" | "integer" | "boolean" | "number" | "array" | "object";
   properties?: Record<string, OpenApiSchema>; //object
-  items?: OpenApiSchema[]; //  array
+  items?: OpenApiSchema; //  array
   $ref?: string; // reference to other scheme
   "x-apifox-orders"?: string[];
   required?: string[]; // object

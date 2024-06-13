@@ -19,7 +19,14 @@ export class OpenApiConverter {
   constructor(public input: OpenApi) {}
 
   public readSchemaFolder(schema: OpenApiSchema) {
-    return schema["x-apifox-folder"] || "DefaultFolder";
+    let folder = schema["x-apifox-folder"] || "DefaultFolder";
+    folder = folder
+      .split("/")
+      .map(folderName => {
+        return folderName[0].toUpperCase() + folderName.slice(1);
+      })
+      .join("");
+    return folder;
   }
 
   /**
@@ -39,6 +46,20 @@ export class OpenApiConverter {
     return this;
   }
 
+  public getRef($ref: string) {
+    const refName = $ref.split("/").pop();
+    if (!refName) {
+      throw new Error(`invalid ref: ${$ref}`);
+    }
+    const folderName = this.readSchemaFolder(
+      this.input.components.schemas[refName]
+    );
+    return {
+      refName,
+      folderName,
+    };
+  }
+
   /**
    * get the model property code string and imports
    */
@@ -51,12 +72,7 @@ export class OpenApiConverter {
     const isRequired = required?.includes(key) || false;
     const base = `${key}${isRequired ? "" : "?"}: `;
     if ($ref) {
-      const refName = $ref.split("/").pop();
-      if (!refName) {
-        throw new Error(`invalid ref: ${$ref}`);
-      }
-      const folderName =
-        this.input.components.schemas[refName]["x-apifox-folder"];
+      const { refName, folderName } = this.getRef($ref);
       return {
         code: `${base}${refName};`,
         imports: [
@@ -68,14 +84,21 @@ export class OpenApiConverter {
     const allImports: string[] = [];
     switch (type) {
       case "string":
+        // todo support enum
         value = "string";
         break;
       case "integer":
         value = "number";
         break;
-      case "array":
-        value = "todo array";
+      case "boolean":
+        value = "boolean";
         break;
+      case "array": {
+        const { code, imports } = this.getModelArray(schema.items!);
+        allImports.push(...imports);
+        value = code;
+        break;
+      }
       case "object": {
         const lines: string[] = [];
         if (properties) {
@@ -102,23 +125,95 @@ export class OpenApiConverter {
     };
   }
 
+  public getModelArray(modelItems: OpenApiSchema): ConvertPropertyResult {
+    const { type, $ref, items } = modelItems;
+    if ($ref) {
+      const { refName, folderName } = this.getRef($ref);
+      return {
+        code: `${refName}[]`,
+        imports: [
+          `import { ${refName} } from "../${folderName}/${refName}.ts";`,
+        ],
+      };
+    }
+    switch (type) {
+      case "string":
+        // todo support enum
+        return {
+          code: "string[]",
+          imports: [],
+        };
+      case "integer":
+        return {
+          code: "number[]",
+          imports: [],
+        };
+      case "number":
+        return {
+          code: "number[]",
+          imports: [],
+        };
+      case "boolean":
+        return {
+          code: "boolean[]",
+          imports: [],
+        };
+      case "object": {
+        // todo support object?
+        console.log("todo object in array");
+        return {
+          code: "object[]",
+          imports: [],
+        };
+      }
+      case "array": {
+        if (!items?.$ref) {
+          throw new Error("array in array items ref not found");
+        }
+        const { refName, folderName } = this.getRef(items.$ref);
+        return {
+          code: `${refName}[][]`,
+          imports: [
+            `import { ${refName} } from "../${folderName}/${refName}.ts";`,
+          ],
+        };
+      }
+      default: {
+        throw new Error(`unknown type: ${type}`);
+      }
+    }
+  }
+
   public getModelFileContent(
     propertyKey: string,
     schema: OpenApiSchema
   ): string {
     const { type, properties } = schema;
+    if (!type) {
+      // may be $ref, ok to ignore?
+      return "";
+    }
     switch (type) {
       case "string":
+        // todo support enum
         return `export type ${propertyKey} = string;`;
       case "integer":
         return `export type ${propertyKey} = number;`;
       case "number":
         return `export type ${propertyKey} = number;`;
-      case "array":
-        return "todo array";
+      case "boolean":
+        return `export type ${propertyKey} = boolean;`;
+      case "array": {
+        if (!schema.items) {
+          throw new Error("array items not found");
+        }
+        const { code, imports } = this.getModelArray(schema.items);
+        return `${imports.join("")} export type ${propertyKey} = ${code};`;
+      }
+
       case "object": {
         const lines: string[] = [];
-        const allImports: string[] = [];
+        let allImports: string[] = [];
         if (properties) {
           for (const [key, value] of Object.entries(properties)) {
             const { code, imports } = this.getModelProperty(
@@ -130,8 +225,8 @@ export class OpenApiConverter {
             allImports.push(...imports);
           }
         }
-
-        return `${allImports.join("")} export interface ${propertyKey} {${lines.join("")}}`;
+        allImports = Array.from(new Set(allImports));
+        return `${allImports.join("")}\n\n export interface ${propertyKey} {${lines.join("")}}`;
       }
       default: {
         throw new Error(`unknown type: ${type}`);
