@@ -68,13 +68,14 @@ export class OpenApiConverter {
     schema: OpenApiSchema,
     required?: string[]
   ): ConvertPropertyResult {
-    const { type, $ref, properties } = schema;
+    const { type, $ref, properties, anyOf, oneOf } = schema;
     const isRequired = required?.includes(key) || false;
-    const base = `${key}${isRequired ? "" : "?"}: `;
+    // empty key for inline object
+    const base = key ? `${key}${isRequired ? "" : "?"}: ` : "";
     if ($ref) {
       const { refName, folderName } = this.getRef($ref);
       return {
-        code: `${base}${refName};`,
+        code: base ? `${base}${refName};` : refName,
         imports: [
           `import { ${refName} } from "../${folderName}/${refName}.ts";`,
         ],
@@ -82,45 +83,72 @@ export class OpenApiConverter {
     }
     let value: string = "";
     const allImports: string[] = [];
-    switch (type) {
-      case "string":
-        // todo support enum
-        value = "string";
-        break;
-      case "integer":
-        value = "number";
-        break;
-      case "boolean":
-        value = "boolean";
-        break;
-      case "array": {
-        const { code, imports } = this.getModelArray(schema.items!);
+    if (anyOf) {
+      const codes: string[] = [];
+      for (const schema of anyOf) {
+        const { code, imports } = this.getModelProperty("", schema);
         allImports.push(...imports);
-        value = code;
-        break;
+        codes.push(code);
       }
-      case "object": {
-        const lines: string[] = [];
-        if (properties) {
-          for (const [key, value] of Object.entries(properties)) {
-            const { code, imports } = this.getModelProperty(
-              key,
-              value,
-              schema.required
-            );
-            lines.push(code);
-            allImports.push(...imports);
+      value = `${codes.join(" | ")}`;
+    } else if (oneOf) {
+      const codes: string[] = [];
+      for (const schema of oneOf) {
+        const { code, imports } = this.getModelProperty("", schema);
+        allImports.push(...imports);
+        codes.push(code);
+      }
+      value = `${codes.join(" | ")}`;
+    } else {
+      switch (type) {
+        case "string":
+          if (schema.enum) {
+            console.log("A enum should be a named model", key, schema);
+            value = `"${schema.enum.join('" | "')}"`;
+          } else {
+            value = "string";
           }
+          break;
+        case "integer":
+          value = "number";
+          break;
+        case "number":
+          value = "number";
+          break;
+        case "boolean":
+          value = "boolean";
+          break;
+        case "array": {
+          const { code, imports } = this.getModelArray(schema.items!);
+          allImports.push(...imports);
+          value = code;
+          break;
         }
-        value = `{${lines.join("")}}`;
-        break;
-      }
-      default: {
-        value = `todo unknown ${type}`;
+        case "object": {
+          const lines: string[] = [];
+          if (properties) {
+            for (const [key, value] of Object.entries(properties)) {
+              const { code, imports } = this.getModelProperty(
+                key,
+                value,
+                schema.required
+              );
+              lines.push(code);
+              allImports.push(...imports);
+            }
+          }
+          value = `{${lines.join("")}}`;
+          break;
+        }
+        default: {
+          console.log("todo unknown type", type);
+          console.log(schema, key);
+          value = `todo unknown ${type}`;
+        }
       }
     }
     return {
-      code: `${base}${value};`,
+      code: base ? `${base}${value};` : value, // no ; for inline object
       imports: allImports,
     };
   }
@@ -159,11 +187,10 @@ export class OpenApiConverter {
           imports: [],
         };
       case "object": {
-        // todo support object?
-        console.log("todo object in array");
+        const { code, imports } = this.getModelProperty("", modelItems);
         return {
-          code: "object[]",
-          imports: [],
+          code: `${code}[]`,
+          imports: imports,
         };
       }
       case "array": {
@@ -194,9 +221,14 @@ export class OpenApiConverter {
       return "";
     }
     switch (type) {
-      case "string":
-        // todo support enum
+      case "string": {
+        if (schema.enum) {
+          return `export enum ${propertyKey} {${schema.enum.map(
+            item => `${item} = "${item}"`
+          )}};`;
+        }
         return `export type ${propertyKey} = string;`;
+      }
       case "integer":
         return `export type ${propertyKey} = number;`;
       case "number":

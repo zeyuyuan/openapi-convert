@@ -1,3 +1,6 @@
+src/output/*
+test/result.json
+
 # Logs
 logs
 *.log

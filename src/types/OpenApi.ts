@@ -9,6 +9,9 @@ export interface OpenApiSchema {
   properties?: Record<string, OpenApiSchema>; //object
   items?: OpenApiSchema; //  array
   $ref?: string; // reference to other scheme
+  anyOf?: OpenApiSchema[];
+  oneOf?: OpenApiSchema[];
+  enum?: string[];
   "x-apifox-orders"?: string[];
   required?: string[]; // object
   "x-apifox-ignore-properties"?: string[];
