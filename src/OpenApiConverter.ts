@@ -83,17 +83,10 @@ export class OpenApiConverter {
     }
     let value: string = "";
     const allImports: string[] = [];
-    if (anyOf) {
+    const anyOrOneOf = anyOf || oneOf;
+    if (anyOrOneOf) {
       const codes: string[] = [];
-      for (const schema of anyOf) {
-        const { code, imports } = this.getModelProperty("", schema);
-        allImports.push(...imports);
-        codes.push(code);
-      }
-      value = `${codes.join(" | ")}`;
-    } else if (oneOf) {
-      const codes: string[] = [];
-      for (const schema of oneOf) {
+      for (const schema of anyOrOneOf) {
         const { code, imports } = this.getModelProperty("", schema);
         allImports.push(...imports);
         codes.push(code);
@@ -103,7 +96,7 @@ export class OpenApiConverter {
       switch (type) {
         case "string":
           if (schema.enum) {
-            console.log("A enum should be a named model", key, schema);
+            console.warn("A enum should be a named model", key, schema);
             value = `"${schema.enum.join('" | "')}"`;
           } else {
             value = "string";
@@ -137,7 +130,12 @@ export class OpenApiConverter {
               allImports.push(...imports);
             }
           }
-          value = `{${lines.join("")}}`;
+          if (!lines.length) {
+            console.warn("Empty object should not exist", key, schema);
+            value = "object";
+          } else {
+            value = `{${lines.join("")}}`;
+          }
           break;
         }
         default: {
@@ -215,10 +213,19 @@ export class OpenApiConverter {
     propertyKey: string,
     schema: OpenApiSchema
   ): string {
-    const { type, properties } = schema;
+    const { type, properties, $ref, oneOf, anyOf } = schema;
+    if ($ref) {
+      const { refName, folderName } = this.getRef($ref);
+      return `import { ${refName} } from "../${folderName}/${refName}.ts";export type ${propertyKey} = ${refName};`;
+    }
+    const anyOrOneOf = anyOf || oneOf;
+    if (anyOrOneOf) {
+      const { imports, code } = this.getModelProperty("", schema);
+      const allImports = Array.from(new Set(imports));
+      return `${allImports.join("")}\n\n export type ${propertyKey} = ${code};`;
+    }
     if (!type) {
-      // may be $ref, ok to ignore?
-      return "";
+      throw new Error("unexpected empty type?");
     }
     switch (type) {
       case "string": {

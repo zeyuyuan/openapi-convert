@@ -1,8 +1,4 @@
 import { describe, expect, it } from "vitest";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
 import { OpenApiConverter, fetchByApi, writeOutputToDisk } from "../src";
 
 const API_URL =
@@ -21,12 +17,6 @@ describe("covert", () => {
     const apiJson = await fetchByApi(API_URL);
     const converter = new OpenApiConverter(apiJson);
     converter.generateModelFolders().generateModelFiles();
-
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = dirname(__filename);
-    const resultPath = path.resolve(__dirname, "result.json");
-    const result = JSON.stringify(converter.output, null, 2);
-    fs.writeFileSync(resultPath, result, "utf8");
     await writeOutputToDisk(converter.output);
   });
 });
