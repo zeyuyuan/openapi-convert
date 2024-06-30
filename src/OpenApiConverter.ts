@@ -3,7 +3,7 @@ import {
   OutputFile,
   OutputFolder,
 } from "./types/ConverterOutput";
-import { OpenApi, OpenApiSchema } from "./types/OpenApi";
+import { OpenApi, OpenApiPath, OpenApiSchema } from "./types/OpenApi";
 
 interface ConvertPropertyResult {
   code: string;
@@ -15,6 +15,8 @@ export class OpenApiConverter {
     models: [],
     apis: [],
   };
+
+  public currentBasePath: string = "../";
 
   constructor(public input: OpenApi) {}
 
@@ -77,7 +79,7 @@ export class OpenApiConverter {
       return {
         code: base ? `${base}${refName};` : refName,
         imports: [
-          `import { ${refName} } from "../${folderName}/${refName}.ts";`,
+          `import { ${refName} } from "${this.currentBasePath}${folderName}/${refName}.ts";`,
         ],
       };
     }
@@ -158,7 +160,7 @@ export class OpenApiConverter {
       return {
         code: `${refName}[]`,
         imports: [
-          `import { ${refName} } from "../${folderName}/${refName}.ts";`,
+          `import { ${refName} } from "${this.currentBasePath}${folderName}/${refName}.ts";`,
         ],
       };
     }
@@ -199,7 +201,7 @@ export class OpenApiConverter {
         return {
           code: `${refName}[][]`,
           imports: [
-            `import { ${refName} } from "../${folderName}/${refName}.ts";`,
+            `import { ${refName} } from "${this.currentBasePath}${folderName}/${refName}.ts";`,
           ],
         };
       }
@@ -216,7 +218,7 @@ export class OpenApiConverter {
     const { type, properties, $ref, oneOf, anyOf } = schema;
     if ($ref) {
       const { refName, folderName } = this.getRef($ref);
-      return `import { ${refName} } from "../${folderName}/${refName}.ts";export type ${propertyKey} = ${refName};`;
+      return `import { ${refName} } from "${this.currentBasePath}${folderName}/${refName}.ts";export type ${propertyKey} = ${refName};`;
     }
     const anyOrOneOf = anyOf || oneOf;
     if (anyOrOneOf) {
@@ -291,6 +293,105 @@ export class OpenApiConverter {
       };
       folder.files.push(file);
     }
+    return this;
+  }
+
+  public getRequestNameFromPath(path: string) {
+    // 将path按照小驼峰生成name, 例如/community/v1/bindSNS 转为communityV1BindSns
+    const pathParts = path.split("/").slice(1);
+    return pathParts
+      .map((part, index) => {
+        if (index === 0) {
+          return part[0].toLowerCase() + part.slice(1);
+        }
+        return part[0].toUpperCase() + part.slice(1);
+      })
+      .join("");
+  }
+
+  public getApiFileContent(name: string, path: string, pathInfo: OpenApiPath) {
+    let result = "";
+    Object.keys(pathInfo).forEach(method => {
+      if (method !== "post") {
+        throw new Error(`only post method is supported, ${method}`);
+      }
+      const { summary, requestBody, responses } = pathInfo[method];
+      let requestBodyCode = "";
+      let requestBodyImports: string[] = [];
+      if (requestBody) {
+        ({ code: requestBodyCode, imports: requestBodyImports } =
+          this.getModelProperty(
+            "",
+            requestBody.content["application/json"].schema
+          ));
+      }
+
+      const { code: responseCode, imports: responseImports } =
+        this.getModelProperty(
+          "",
+          responses["200"].content["application/json"].schema
+        );
+
+      const imports = Array.from(
+        new Set([...requestBodyImports, ...responseImports])
+      );
+
+      result += `
+        ${imports.join("")}\n\n
+        /**
+         * ${summary}
+         */
+        export const ${name} = async (${requestBodyCode ? `params: ${requestBodyCode}` : ""}): Promise<${responseCode}> => {
+          const url = '${path}';
+          const options = {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            ${requestBodyCode ? `body: JSON.stringify(params),` : ""}
+          };
+          const response = await fetch(url, options);
+          return response.json();
+        }
+      `;
+    });
+    return result;
+  }
+
+  public getApiFoldName(folder: string): string {
+    // folder拆分为英文单词数组，其他字符不要
+    const words = folder.match(/[a-zA-Z]+/g);
+    if (!words) {
+      return "";
+    }
+    // word首字母大写
+    return words.map(word => word[0].toUpperCase() + word.slice(1)).join("");
+  }
+
+  public generateApiFiles() {
+    this.currentBasePath = "../../models/";
+    const apiFolders = new Map<string, OutputFolder>();
+    for (const [path, pathItem] of Object.entries(this.input.paths).slice(
+      0,
+      10
+    )) {
+      const folderName =
+        this.getApiFoldName(pathItem.post["x-apifox-folder"]) || "DefaultApi";
+      const fileName = this.getRequestNameFromPath(path);
+      const fileContent = this.getApiFileContent(fileName, path, pathItem);
+      const file: OutputFile = {
+        fileName,
+        content: fileContent,
+      };
+      if (!apiFolders.get(folderName)) {
+        apiFolders.set(folderName, {
+          folderName: folderName,
+          files: [],
+        });
+      }
+      apiFolders.get(folderName)!.files.push(file);
+    }
+    this.output.apis = Array.from(apiFolders.values());
     return this;
   }
 }

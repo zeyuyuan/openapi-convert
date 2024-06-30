@@ -8,7 +8,7 @@ import { dirname } from "path";
  * 将output写入本地
  * @desc node only
  */
-export const writeOutputToDisk = async ({ models }: ConverterOutput) => {
+export const writeOutputToDisk = async ({ models, apis }: ConverterOutput) => {
   models.forEach(({ files, folderName }) => {
     files.forEach(({ fileName, content }) => {
       const __filename = fileURLToPath(import.meta.url);
@@ -18,6 +18,17 @@ export const writeOutputToDisk = async ({ models }: ConverterOutput) => {
         fs.mkdirSync(dir, { recursive: true });
       }
 
+      const filePath = path.join(dir, `${fileName}.ts`);
+      fs.writeFileSync(filePath, content);
+    });
+  });
+
+  apis.forEach(({ files, folderName }) => {
+    files.forEach(({ fileName, content }) => {
+      const dir = path.join(__dirname, "/output", "/apis", folderName);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
       const filePath = path.join(dir, `${fileName}.ts`);
       fs.writeFileSync(filePath, content);
     });

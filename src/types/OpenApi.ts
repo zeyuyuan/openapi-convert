@@ -1,3 +1,5 @@
+import { ApiInfo } from "./api";
+
 export interface OpenApiProperty {
   type?: "string" | "integer" | "array";
   $ref?: string;
@@ -22,7 +24,17 @@ export interface OpenApiComponents {
   schemas: Record<string, OpenApiSchema>;
 }
 
+export enum Method {
+  get = "get",
+  post = "post",
+  put = "put",
+  delete = "delete",
+}
+
+export type OpenApiPath = Record<Method, ApiInfo>;
+
 export interface OpenApi {
   oepnapi: string;
   components: OpenApiComponents;
+  paths: Record<string, OpenApiPath>;
 }
