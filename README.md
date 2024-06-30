@@ -1,6 +1,6 @@
 # openapi-convert
 
-Covert apifox openapi3.0 to ts codes
+Convert OpenAPI 3.0 specifications to TypeScript code. This tool is designed to work with Apifox exports.
 
 Start with [vite-vanilla-ts-lib-starter](https://github.com/kbysiec/vite-vanilla-ts-lib-starter)
 
@@ -19,3 +19,12 @@ The starter contains the following scripts:
 - `format` - format all with prettier and stylelint
 - `prepare` - script for setting up husky pre-commit hook
 - `uninstall-husky` - script for removing husky from repository
+
+## TODO
+
+- [x] Implement generation of basic interfaces and enums
+- [ ] Implement generation of request functions
+- [ ] Implement descriptions and other jsdoc
+- [ ] Implement command line instructions
+- [ ] Optimize configurability
+- [ ] Improve test cases
