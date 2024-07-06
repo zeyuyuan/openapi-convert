@@ -4,6 +4,7 @@ import {
   OutputFolder,
 } from "./types/ConverterOutput";
 import { OpenApi, OpenApiPath, OpenApiSchema } from "./types/OpenApi";
+import { ApiInfo } from "./types/api";
 
 interface ConvertPropertyResult {
   code: string;
@@ -70,7 +71,7 @@ export class OpenApiConverter {
     schema: OpenApiSchema,
     required?: string[]
   ): ConvertPropertyResult {
-    const { type, $ref, properties, anyOf, oneOf } = schema;
+    const { type, $ref, properties, anyOf, oneOf, format } = schema;
     const isRequired = required?.includes(key) || false;
     // empty key for inline object
     const base = key ? `${key}${isRequired ? "" : "?"}: ` : "";
@@ -86,7 +87,9 @@ export class OpenApiConverter {
     let value: string = "";
     const allImports: string[] = [];
     const anyOrOneOf = anyOf || oneOf;
-    if (anyOrOneOf) {
+    if (format === "binary") {
+      value = "File";
+    } else if (anyOrOneOf) {
       const codes: string[] = [];
       for (const schema of anyOrOneOf) {
         const { code, imports } = this.getModelProperty("", schema);
@@ -98,7 +101,7 @@ export class OpenApiConverter {
       switch (type) {
         case "string":
           if (schema.enum) {
-            console.warn("A enum should be a named model", key, schema);
+            // console.warn("A enum should be a named model", key, schema);
             value = `"${schema.enum.join('" | "')}"`;
           } else {
             value = "string";
@@ -133,7 +136,7 @@ export class OpenApiConverter {
             }
           }
           if (!lines.length) {
-            console.warn("Empty object should not exist", key, schema);
+            // console.warn("Empty object should not exist", key, schema);
             value = "object";
           } else {
             value = `{${lines.join("")}}`;
@@ -309,51 +312,127 @@ export class OpenApiConverter {
       .join("");
   }
 
+  protected getJsonApiFileContent(
+    name: string,
+    path: string,
+    openApiPath: ApiInfo
+  ): string {
+    const { summary, requestBody, responses } = openApiPath;
+    let requestBodyCode = "";
+    let requestBodyImports: string[] = [];
+    if (requestBody) {
+      ({ code: requestBodyCode, imports: requestBodyImports } =
+        this.getModelProperty(
+          "",
+          requestBody.content["application/json"]!.schema
+        ));
+    }
+    const { code: responseCode, imports: responseImports } =
+      this.getModelProperty(
+        "",
+        responses["200"].content["application/json"].schema
+      );
+    const imports = Array.from(
+      new Set([...requestBodyImports, ...responseImports])
+    );
+    return `
+      ${imports.join("")}\n\n
+      /**
+       * ${summary}
+       */
+      export const ${name} = async (${requestBodyCode ? `params: ${requestBodyCode}` : ""}): Promise<${responseCode}> => {
+        const url = '${path}';
+        const options = {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          ${requestBodyCode ? `body: JSON.stringify(params)` : ""}
+        };
+        const response = await fetch(url, options);
+        return response.json();
+      }
+    `;
+  }
+
+  protected getFormDataApiFileContent(
+    name: string,
+    path: string,
+    openApiPath: ApiInfo
+  ): string {
+    const { summary, requestBody, responses } = openApiPath;
+    let requestBodyCode = "";
+    let requestBodyImports: string[] = [];
+    if (requestBody) {
+      ({ code: requestBodyCode, imports: requestBodyImports } =
+        this.getModelProperty(
+          "",
+          requestBody.content["multipart/form-data"]!.schema
+        ));
+    }
+    const { code: responseCode, imports: responseImports } =
+      this.getModelProperty(
+        "",
+        responses["200"].content["application/json"].schema
+      );
+    const imports = Array.from(
+      new Set([...requestBodyImports, ...responseImports])
+    );
+    return `
+      ${imports.join("")}\n\n
+      /**
+       * ${summary}
+       */
+      export const ${name} = async (${requestBodyCode ? `params: ${requestBodyCode}` : ""}): Promise<${responseCode}> => {
+        const url = '${path}';
+        const formData = new FormData();
+        ${
+          requestBodyCode
+            ? `Object.entries(params).forEach(([key, value]) => {
+          formData.append(key, value);
+        });`
+            : ""
+        }
+        const options = {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          ${requestBodyCode ? `body: formData` : ""}
+        };
+        const response = await fetch(url, options);
+        return response.json();
+      }
+    `;
+  }
+
   public getApiFileContent(name: string, path: string, pathInfo: OpenApiPath) {
     let result = "";
     Object.keys(pathInfo).forEach(method => {
       if (method !== "post") {
         throw new Error(`only post method is supported, ${method}`);
       }
-      const { summary, requestBody, responses } = pathInfo[method];
-      let requestBodyCode = "";
-      let requestBodyImports: string[] = [];
-      if (requestBody) {
-        ({ code: requestBodyCode, imports: requestBodyImports } =
-          this.getModelProperty(
-            "",
-            requestBody.content["application/json"].schema
-          ));
-      }
-
-      const { code: responseCode, imports: responseImports } =
-        this.getModelProperty(
-          "",
-          responses["200"].content["application/json"].schema
-        );
-
-      const imports = Array.from(
-        new Set([...requestBodyImports, ...responseImports])
-      );
-
-      result += `
-        ${imports.join("")}\n\n
-        /**
-         * ${summary}
-         */
-        export const ${name} = async (${requestBodyCode ? `params: ${requestBodyCode}` : ""}): Promise<${responseCode}> => {
-          const url = '${path}';
-          const options = {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            ${requestBodyCode ? `body: JSON.stringify(params),` : ""}
-          };
-          const response = await fetch(url, options);
-          return response.json();
+      const requestBody = pathInfo[method].requestBody;
+      if (!requestBody) {
+        result += this.getJsonApiFileContent(name, path, pathInfo[method]);
+      } else {
+        if (requestBody.content?.["multipart/form-data"]) {
+          result += this.getFormDataApiFileContent(
+            name,
+            path,
+            pathInfo[method]
+          );
+        } else if (requestBody.content?.["application/json"]) {
+          result += this.getJsonApiFileContent(name, path, pathInfo[method]);
+        } else {
+          console.log(
+            "unsupported content type",
+            requestBody.content,
+            name,
+            path
+          );
         }
-      `;
+      }
     });
     return result;
   }
@@ -371,10 +450,7 @@ export class OpenApiConverter {
   public generateApiFiles() {
     this.currentBasePath = "../../models/";
     const apiFolders = new Map<string, OutputFolder>();
-    for (const [path, pathItem] of Object.entries(this.input.paths).slice(
-      0,
-      10
-    )) {
+    for (const [path, pathItem] of Object.entries(this.input.paths)) {
       const folderName =
         this.getApiFoldName(pathItem.post["x-apifox-folder"]) || "DefaultApi";
       const fileName = this.getRequestNameFromPath(path);

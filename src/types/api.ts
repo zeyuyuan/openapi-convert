@@ -5,7 +5,10 @@ export interface SchemaRef {
 }
 
 export interface RequestBodyContent {
-  "application/json": {
+  "application/json"?: {
+    schema: OpenApiSchema;
+  };
+  "multipart/form-data": {
     schema: OpenApiSchema;
   };
   // todo support more content types

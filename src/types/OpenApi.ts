@@ -14,6 +14,7 @@ export interface OpenApiSchema {
   anyOf?: OpenApiSchema[];
   oneOf?: OpenApiSchema[];
   enum?: string[];
+  format?: "binary"; // formData
   "x-apifox-orders"?: string[];
   required?: string[]; // object
   "x-apifox-ignore-properties"?: string[];
