@@ -27,7 +27,11 @@ export const generateFormDataCode = (interfaceStr: string): string => {
     const cleanName = isOptional ? name.slice(0, -1) : name; // Remove '?' from name if optional
 
     if (type === "File" || type === "Blob") {
-      formDataCode += `formData.append('${cleanName}', params.${cleanName});\n`;
+      if (isOptional) {
+        formDataCode += `if (params.${cleanName} !== undefined) {\n  formData.append('${cleanName}', params.${cleanName});\n}\n`;
+      } else {
+        formDataCode += `formData.append('${cleanName}', params.${cleanName});\n`;
+      }
     } else {
       // Check if the field is optional
       if (isOptional) {
