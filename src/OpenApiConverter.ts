@@ -1,3 +1,4 @@
+import { generateFormDataCode } from "./tools";
 import {
   ConverterOutput,
   OutputFile,
@@ -236,7 +237,7 @@ export class OpenApiConverter {
       case "string": {
         if (schema.enum) {
           return `export enum ${propertyKey} {${schema.enum.map(
-            item => `${item} = "${item}"`
+            item => `${item.replace(/\s/g, "_")} = "${item}"`
           )}};`;
         }
         return `export type ${propertyKey} = string;`;
@@ -378,30 +379,25 @@ export class OpenApiConverter {
     const imports = Array.from(
       new Set([...requestBodyImports, ...responseImports])
     );
+
     return `
       ${imports.join("")}\n\n
       /**
        * ${summary}
        */
       export const ${name} = async (${requestBodyCode ? `params: ${requestBodyCode}` : ""}): Promise<${responseCode}> => {
-        const url = '${path}';
-        const formData = new FormData();
-        ${
-          requestBodyCode
-            ? `Object.entries(params).forEach(([key, value]) => {
-          formData.append(key, value);
-        });`
-            : ""
-        }
-        const options = {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          ${requestBodyCode ? `body: formData` : ""}
-        };
-        const response = await fetch(url, options);
-        return response.json();
+      const url = '${path}';
+      const formData = new FormData();
+      ${requestBodyCode ? generateFormDataCode(requestBodyCode) : ""}
+      const options = {
+        method: 'POST',
+        headers: {
+        'Content-Type': 'multipart/form-data',
+        },
+        ${requestBodyCode ? `body: formData` : ""}
+      };
+      const response = await fetch(url, options);
+      return response.json();
       }
     `;
   }
