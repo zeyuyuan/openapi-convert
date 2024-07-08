@@ -1,4 +1,4 @@
-src/output/*
+test/output/*
 test/result.json
 
 # Logs

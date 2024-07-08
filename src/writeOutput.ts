@@ -1,19 +1,18 @@
 import { ConverterOutput } from "./types/ConverterOutput";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
 
 /**
  * 将output写入本地
  * @desc node only
  */
-export const writeOutputToDisk = async ({ models, apis }: ConverterOutput) => {
+export const writeOutputToDisk = async (
+  { models, apis }: ConverterOutput,
+  dirPath: string
+) => {
   models.forEach(({ files, folderName }) => {
     files.forEach(({ fileName, content }) => {
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = dirname(__filename);
-      const dir = path.join(__dirname, "/output", "/models", folderName);
+      const dir = path.join(dirPath, "/models", folderName);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
@@ -25,7 +24,7 @@ export const writeOutputToDisk = async ({ models, apis }: ConverterOutput) => {
 
   apis.forEach(({ files, folderName }) => {
     files.forEach(({ fileName, content }) => {
-      const dir = path.join(__dirname, "/output", "/apis", folderName);
+      const dir = path.join(dirPath, "/apis", folderName);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }

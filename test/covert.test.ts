@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { OpenApiConverter, fetchByApi, writeOutputToDisk } from "../src";
 import { OpenApi } from "../src/types/OpenApi";
+import path from "path";
 
 const API_URL =
   "http://127.0.0.1:4523/export/openapi?projectId=1826684&specialPurpose=openapi-generator";
@@ -18,7 +19,8 @@ describe("covert", () => {
     const apiJson: OpenApi = await fetchByApi(API_URL);
     const converter = new OpenApiConverter(apiJson);
     converter.generateModelFolders().generateModelFiles().generateApiFiles();
-    await writeOutputToDisk(converter.output);
+    const rootPath = path.resolve(__dirname, "output");
+    await writeOutputToDisk(converter.output, rootPath);
   });
 
   it("test getApiFoldName with hyphen and underscore", () => {
