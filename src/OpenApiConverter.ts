@@ -81,7 +81,7 @@ export class OpenApiConverter {
       return {
         code: base ? `${base}${refName};` : refName,
         imports: [
-          `import { ${refName} } from "${this.currentBasePath}${folderName}/${refName}.ts";`,
+          `import { ${refName} } from "${this.currentBasePath}${folderName}/${refName}";`,
         ],
       };
     }
@@ -164,7 +164,7 @@ export class OpenApiConverter {
       return {
         code: `${refName}[]`,
         imports: [
-          `import { ${refName} } from "${this.currentBasePath}${folderName}/${refName}.ts";`,
+          `import { ${refName} } from "${this.currentBasePath}${folderName}/${refName}";`,
         ],
       };
     }
@@ -205,7 +205,7 @@ export class OpenApiConverter {
         return {
           code: `${refName}[][]`,
           imports: [
-            `import { ${refName} } from "${this.currentBasePath}${folderName}/${refName}.ts";`,
+            `import { ${refName} } from "${this.currentBasePath}${folderName}/${refName}";`,
           ],
         };
       }
@@ -222,7 +222,7 @@ export class OpenApiConverter {
     const { type, properties, $ref, oneOf, anyOf } = schema;
     if ($ref) {
       const { refName, folderName } = this.getRef($ref);
-      return `import { ${refName} } from "${this.currentBasePath}${folderName}/${refName}.ts";export type ${propertyKey} = ${refName};`;
+      return `import { ${refName} } from "${this.currentBasePath}${folderName}/${refName}";export type ${propertyKey} = ${refName};`;
     }
     const anyOrOneOf = anyOf || oneOf;
     if (anyOrOneOf) {
