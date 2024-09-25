@@ -1,7 +1,6 @@
 {
   "name": "openapi-convert",
-  "private": true,
-  "version": "0.0.1",
+  "version": "0.0.8",
   "main": "./dist/openapi-convert.cjs",
   "module": "./dist/openapi-convert.mjs",
   "exports": {
@@ -15,9 +14,12 @@
     }
   },
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite --host",
-    "build": "rimraf build/**/* && tsc && vite build && dts-bundle-generator --config ./dts-bundle-generator.config.ts && copyfiles ./package.json build",
+    "build": "rimraf build/**/* && tsc && vite build && dts-bundle-generator --config ./dts-bundle-generator.config.ts",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "lint:scripts": "eslint . --ext .ts",

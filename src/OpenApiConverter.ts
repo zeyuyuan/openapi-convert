@@ -270,7 +270,9 @@ export class OpenApiConverter {
             allImports.push(...imports);
           }
         }
-        allImports = Array.from(new Set(allImports));
+        allImports = Array.from(new Set(allImports)).filter(
+          item => !item.includes(` ${propertyKey} `) // avoid self import
+        );
         return `${allImports.join("")}\n\n export interface ${propertyKey} {${lines.join("")}}`;
       }
       default: {

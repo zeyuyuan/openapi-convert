@@ -8,8 +8,11 @@ import { ApiInfo } from "../src/types/api";
 import { OpenApi } from "../src/types/OpenApi";
 import path from "path";
 
-const API_URL =
-  "http://127.0.0.1:4523/export/openapi?projectId=1826684&specialPurpose=openapi-generator";
+// const API_URL =
+//   "http://127.0.0.1:4523/export/openapi?projectId=1826684&specialPurpose=openapi-generator";
+
+// tg mini app
+const API_URL = "http://127.0.0.1:4523/export/openapi/2?version=openapi30";
 
 class CustomOpenApiConverter extends OpenApiConverter {
   public getRequestNameFromPath(path: string) {
