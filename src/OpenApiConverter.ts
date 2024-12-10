@@ -199,6 +199,7 @@ export class OpenApiConverter {
       }
       case "array": {
         if (!items?.$ref) {
+          console.log("modelItems:", modelItems);
           throw new Error("array in array items ref not found");
         }
         const { refName, folderName } = this.getRef(items.$ref);
