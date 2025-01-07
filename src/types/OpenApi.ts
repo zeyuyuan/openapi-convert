@@ -6,6 +6,12 @@ export interface OpenApiProperty {
   items?: OpenApiProperty[];
 }
 
+export interface OpenApiEnum {
+  value: string | number;
+  name: string;
+  description?: string;
+}
+
 export interface OpenApiSchema {
   type?: "string" | "integer" | "boolean" | "number" | "array" | "object";
   properties?: Record<string, OpenApiSchema>; //object
@@ -14,6 +20,7 @@ export interface OpenApiSchema {
   anyOf?: OpenApiSchema[];
   oneOf?: OpenApiSchema[];
   enum?: string[];
+  "x-apifox-enum"?: OpenApiEnum[];
   format?: "binary"; // formData
   "x-apifox-orders"?: string[];
   required?: string[]; // object

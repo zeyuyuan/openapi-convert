@@ -20,7 +20,10 @@ export class OpenApiConverter {
 
   public currentBasePath: string = "../";
 
-  constructor(public input: OpenApi) {}
+  constructor(
+    public input: OpenApi,
+    public debug?: boolean
+  ) {}
 
   public readSchemaFolder(schema: OpenApiSchema) {
     let folder = schema["x-apifox-folder"] || "DefaultFolder";
@@ -220,6 +223,9 @@ export class OpenApiConverter {
     propertyKey: string,
     schema: OpenApiSchema
   ): string {
+    if (this.debug) {
+      console.log(`${propertyKey} in getModelFileContent`, schema);
+    }
     const { type, properties, $ref, oneOf, anyOf } = schema;
     if ($ref) {
       const { refName, folderName } = this.getRef($ref);
@@ -236,6 +242,11 @@ export class OpenApiConverter {
     }
     switch (type) {
       case "string": {
+        if (schema["x-apifox-enum"]) {
+          return `export enum ${propertyKey} {${schema["x-apifox-enum"].map(
+            item => `${item.name} = "${item.value}"`
+          )}};`;
+        }
         if (schema.enum) {
           return `export enum ${propertyKey} {${schema.enum.map(
             item => `${item.replace(/\s/g, "_")} = "${item}"`
@@ -244,8 +255,18 @@ export class OpenApiConverter {
         return `export type ${propertyKey} = string;`;
       }
       case "integer":
+        if (schema["x-apifox-enum"]) {
+          return `export enum ${propertyKey} {${schema["x-apifox-enum"].map(
+            item => `${item.name} = ${item.value}`
+          )}};`;
+        }
         return `export type ${propertyKey} = number;`;
       case "number":
+        if (schema["x-apifox-enum"]) {
+          return `export enum ${propertyKey} {${schema["x-apifox-enum"].map(
+            item => `${item.name} = ${item.value}`
+          )}};`;
+        }
         return `export type ${propertyKey} = number;`;
       case "boolean":
         return `export type ${propertyKey} = boolean;`;
@@ -407,6 +428,9 @@ export class OpenApiConverter {
 
   public getApiFileContent(name: string, path: string, pathInfo: OpenApiPath) {
     let result = "";
+    if (this.debug) {
+      console.log(`${name} in getApiFileContent`, path, pathInfo);
+    }
     Object.keys(pathInfo).forEach(method => {
       if (method !== "post") {
         throw new Error(`only post method is supported, ${method}`);
