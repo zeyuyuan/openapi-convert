@@ -242,7 +242,7 @@ export class OpenApiConverter {
     }
     switch (type) {
       case "string": {
-        if (schema["x-apifox-enum"]) {
+        if (schema["x-apifox-enum"]?.[0]?.name) {
           return `export enum ${propertyKey} {${schema["x-apifox-enum"].map(
             item => `${item.name || item.value} = "${item.value}"`
           )}};`;
