@@ -161,7 +161,7 @@ export class OpenApiConverter {
   }
 
   public getModelArray(modelItems: OpenApiSchema): ConvertPropertyResult {
-    const { type, $ref, items, oneof } = modelItems;
+    const { type, $ref, items, oneOf, anyOf } = modelItems;
     if ($ref) {
       const { refName, folderName } = this.getRef($ref);
       return {
@@ -169,6 +169,21 @@ export class OpenApiConverter {
         imports: [
           `import { ${refName} } from "${this.currentBasePath}${folderName}/${refName}";`,
         ],
+      };
+    }
+    // Handle oneOf/anyOf before checking type
+    const anyOrOneOf = anyOf || oneOf;
+    if (anyOrOneOf) {
+      const codes: string[] = [];
+      const allImports: string[] = [];
+      for (const schema of anyOrOneOf) {
+        const { code, imports } = this.getModelProperty("", schema);
+        allImports.push(...imports);
+        codes.push(code);
+      }
+      return {
+        code: `(${codes.join(" | ")})[]`,
+        imports: allImports,
       };
     }
     switch (type) {
