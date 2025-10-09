@@ -161,7 +161,7 @@ export class OpenApiConverter {
   }
 
   public getModelArray(modelItems: OpenApiSchema): ConvertPropertyResult {
-    const { type, $ref, items } = modelItems;
+    const { type, $ref, items, oneof } = modelItems;
     if ($ref) {
       const { refName, folderName } = this.getRef($ref);
       return {
@@ -214,7 +214,9 @@ export class OpenApiConverter {
         };
       }
       default: {
-        throw new Error(`unknown type: ${type}`);
+        throw new Error(
+          `modelItems: ${JSON.stringify(modelItems)} unknown type: ${type}`
+        );
       }
     }
   }
@@ -298,7 +300,11 @@ export class OpenApiConverter {
         return `${allImports.join("")}\n\n export interface ${propertyKey} {${lines.join("")}}`;
       }
       default: {
-        throw new Error(`unknown type: ${type}`);
+        throw new Error(
+          `property: ${propertyKey} unknown type: ${type}, ${JSON.stringify(
+            schema
+          )}`
+        );
       }
     }
   }
