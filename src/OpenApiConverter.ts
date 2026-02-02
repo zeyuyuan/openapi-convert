@@ -121,7 +121,12 @@ export class OpenApiConverter {
           value = "boolean";
           break;
         case "array": {
-          const { code, imports } = this.getModelArray(schema.items!);
+          if (!schema.items) {
+            throw new Error(
+              `Array property "${key}" is missing "items" definition. Schema: ${JSON.stringify(schema)}`
+            );
+          }
+          const { code, imports } = this.getModelArray(schema.items);
           allImports.push(...imports);
           value = code;
           break;
@@ -161,6 +166,11 @@ export class OpenApiConverter {
   }
 
   public getModelArray(modelItems: OpenApiSchema): ConvertPropertyResult {
+    if (!modelItems) {
+      throw new Error(
+        `getModelArray received undefined/null modelItems. This usually means an array schema is missing its "items" definition.`
+      );
+    }
     const { type, $ref, items, oneOf, anyOf } = modelItems;
     if ($ref) {
       const { refName, folderName } = this.getRef($ref);
@@ -300,13 +310,19 @@ export class OpenApiConverter {
         let allImports: string[] = [];
         if (properties) {
           for (const [key, value] of Object.entries(properties)) {
-            const { code, imports } = this.getModelProperty(
-              key,
-              value,
-              schema.required
-            );
-            lines.push(code);
-            allImports.push(...imports);
+            try {
+              const { code, imports } = this.getModelProperty(
+                key,
+                value,
+                schema.required
+              );
+              lines.push(code);
+              allImports.push(...imports);
+            } catch (error) {
+              throw new Error(
+                `Failed at property "${key}" in model "${propertyKey}": ${(error as Error).message}`
+              );
+            }
           }
         }
         allImports = Array.from(new Set(allImports)).filter(
@@ -336,11 +352,17 @@ export class OpenApiConverter {
           "Folder not found, run generateModelFolders method first"
         );
       }
-      const file: OutputFile = {
-        fileName: key,
-        content: this.getModelFileContent(key, value),
-      };
-      folder.files.push(file);
+      try {
+        const file: OutputFile = {
+          fileName: key,
+          content: this.getModelFileContent(key, value),
+        };
+        folder.files.push(file);
+      } catch (error) {
+        throw new Error(
+          `Failed to generate model file for schema "${key}": ${(error as Error).message}`
+        );
+      }
     }
     return this;
   }
@@ -498,18 +520,24 @@ export class OpenApiConverter {
       const folderName =
         this.getApiFoldName(pathItem.post["x-apifox-folder"]) || "DefaultApi";
       const fileName = this.getRequestNameFromPath(path);
-      const fileContent = this.getApiFileContent(fileName, path, pathItem);
-      const file: OutputFile = {
-        fileName,
-        content: fileContent,
-      };
-      if (!apiFolders.get(folderName)) {
-        apiFolders.set(folderName, {
-          folderName: folderName,
-          files: [],
-        });
+      try {
+        const fileContent = this.getApiFileContent(fileName, path, pathItem);
+        const file: OutputFile = {
+          fileName,
+          content: fileContent,
+        };
+        if (!apiFolders.get(folderName)) {
+          apiFolders.set(folderName, {
+            folderName: folderName,
+            files: [],
+          });
+        }
+        apiFolders.get(folderName)!.files.push(file);
+      } catch (error) {
+        throw new Error(
+          `Failed to generate API file for path "${path}" (${fileName}): ${(error as Error).message}`
+        );
       }
-      apiFolders.get(folderName)!.files.push(file);
     }
     this.output.apis = Array.from(apiFolders.values());
     return this;
